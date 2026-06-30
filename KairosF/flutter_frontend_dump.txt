@@ -1,0 +1,4305 @@
+Flutter Frontend Source Dump
+
+==================================================
+FILE: lib/app/Kairos_app.dart
+==================================================
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'router.dart';
+import 'theme.dart';
+
+class KairosApp extends ConsumerWidget {
+  const KairosApp({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
+    final themeMode = ref.watch(themeModeProvider);
+
+    return MaterialApp.router(
+      title: 'Kairos',
+      debugShowCheckedModeBanner: false,
+      theme: KairosTheme.light(),
+      darkTheme: KairosTheme.dark(),
+      themeMode: themeMode,
+      routerConfig: router,
+    );
+  }
+}
+
+
+==================================================
+FILE: lib/app/router.dart
+==================================================
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../features/auth/application/auth_controller.dart';
+import '../features/auth/presentation/login_screen.dart';
+import '../features/auth/presentation/register_screen.dart';
+import '../features/dashboard/presentation/home_screen.dart';
+import '../features/inbox/presentation/inbox_screen.dart';
+import '../features/memories/presentation/memories_screen.dart';
+import '../features/memories/presentation/memory_detail_screen.dart';
+import '../features/notifications/presentation/notifications_screen.dart';
+import '../features/profile/presentation/profile_screen.dart';
+import '../features/workflows/presentation/workflow_detail_screen.dart';
+import '../shared/widgets/Kairos_shell.dart';
+
+final routerProvider = Provider<GoRouter>((ref) {
+  final authState = ref.watch(authControllerProvider);
+
+  return GoRouter(
+    initialLocation: authState.isAuthenticated ? '/home' : '/login',
+    redirect: (context, state) {
+      final isAuthRoute = state.matchedLocation == '/login' ||
+          state.matchedLocation == '/register';
+      if (!authState.isAuthenticated && !isAuthRoute) return '/login';
+      if (authState.isAuthenticated && isAuthRoute) return '/home';
+      if (state.matchedLocation == '/') return '/home';
+      return null;
+    },
+    routes: [
+      GoRoute(
+        path: '/',
+        redirect: (context, state) => '/home',
+      ),
+      GoRoute(
+        path: '/login',
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/register',
+        builder: (context, state) => const RegisterScreen(),
+      ),
+      ShellRoute(
+        builder: (context, state, child) => KairosShell(child: child),
+        routes: [
+          GoRoute(
+            path: '/home',
+            pageBuilder: (context, state) => _fadePage(
+              state,
+              const HomeScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/inbox',
+            pageBuilder: (context, state) => _fadePage(
+              state,
+              const InboxScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/memories',
+            pageBuilder: (context, state) => _fadePage(
+              state,
+              const MemoriesScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/memory/:id',
+            pageBuilder: (context, state) => _fadePage(
+              state,
+              MemoryDetailScreen(id: state.pathParameters['id'] ?? ''),
+            ),
+          ),
+          GoRoute(
+            path: '/workflow/:id',
+            pageBuilder: (context, state) => _fadePage(
+              state,
+              WorkflowDetailScreen(id: state.pathParameters['id'] ?? ''),
+            ),
+          ),
+          GoRoute(
+            path: '/notifications',
+            pageBuilder: (context, state) => _fadePage(
+              state,
+              const NotificationsScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/profile',
+            pageBuilder: (context, state) => _fadePage(
+              state,
+              const ProfileScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/settings',
+            redirect: (context, state) => '/profile',
+          ),
+        ],
+      ),
+    ],
+  );
+});
+
+CustomTransitionPage<void> _fadePage(GoRouterState state, Widget child) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      return FadeTransition(opacity: animation, child: child);
+    },
+  );
+}
+
+
+==================================================
+FILE: lib/app/theme.dart
+==================================================
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
+
+class KairosColors {
+  const KairosColors._();
+
+  static const primary = Color(0xFF2563EB);
+  static const primaryDark = Color(0xFF3B82F6);
+  static const success = Color(0xFF16A34A);
+  static const warning = Color(0xFFEA580C);
+  static const critical = Color(0xFFDC2626);
+  static const textPrimary = Color(0xFF0F172A);
+  static const textSecondary = Color(0xFF64748B);
+  static const surface = Color(0xFFF8FAFC);
+  static const border = Color(0xFFE2E8F0);
+  static const darkSurface = Color(0xFF111827);
+  static const darkBorder = Color(0xFF334155);
+}
+
+class KairosSpacing {
+  const KairosSpacing._();
+
+  static const xs = 4.0;
+  static const sm = 8.0;
+  static const md = 16.0;
+  static const lg = 24.0;
+  static const xl = 32.0;
+  static const xxl = 48.0;
+}
+
+class KairosRadius {
+  const KairosRadius._();
+
+  static const sm = 6.0;
+  static const md = 8.0;
+  static const lg = 12.0;
+}
+
+class KairosTheme {
+  const KairosTheme._();
+
+  static ThemeData light() {
+    return _base(
+      brightness: Brightness.light,
+      primary: KairosColors.primary,
+      surface: Colors.white,
+      scaffold: const Color(0xFFF8FAFC),
+      textPrimary: KairosColors.textPrimary,
+      textSecondary: KairosColors.textSecondary,
+      border: KairosColors.border,
+    );
+  }
+
+  static ThemeData dark() {
+    return _base(
+      brightness: Brightness.dark,
+      primary: KairosColors.primaryDark,
+      surface: KairosColors.darkSurface,
+      scaffold: const Color(0xFF0B1120),
+      textPrimary: KairosColors.surface,
+      textSecondary: const Color(0xFFCBD5E1),
+      border: KairosColors.darkBorder,
+    );
+  }
+
+  static ThemeData _base({
+    required Brightness brightness,
+    required Color primary,
+    required Color surface,
+    required Color scaffold,
+    required Color textPrimary,
+    required Color textSecondary,
+    required Color border,
+  }) {
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: primary,
+      brightness: brightness,
+      primary: primary,
+      surface: surface,
+      outline: border,
+      error: KairosColors.critical,
+    );
+
+    final baseTextTheme = brightness == Brightness.light
+        ? Typography.blackMountainView
+        : Typography.whiteMountainView;
+
+    final textTheme = baseTextTheme.copyWith(
+      displayLarge: baseTextTheme.displayLarge?.copyWith(
+        fontSize: 32,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0,
+      ),
+      headlineMedium: baseTextTheme.headlineMedium?.copyWith(
+        fontSize: 24,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0,
+      ),
+      titleLarge: baseTextTheme.titleLarge?.copyWith(
+        fontSize: 20,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0,
+      ),
+      titleMedium: baseTextTheme.titleMedium?.copyWith(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0,
+      ),
+      bodyLarge: baseTextTheme.bodyLarge?.copyWith(
+        fontSize: 16,
+        letterSpacing: 0,
+      ),
+      bodyMedium: baseTextTheme.bodyMedium?.copyWith(
+        fontSize: 14,
+        letterSpacing: 0,
+      ),
+      labelSmall: baseTextTheme.labelSmall?.copyWith(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0,
+      ),
+    ).apply(
+      bodyColor: textPrimary,
+      displayColor: textPrimary,
+      fontFamily: 'Inter',
+    );
+
+    return ThemeData(
+      useMaterial3: true,
+      brightness: brightness,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: scaffold,
+      textTheme: textTheme,
+      appBarTheme: AppBarTheme(
+        centerTitle: false,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        backgroundColor: scaffold,
+        foregroundColor: textPrimary,
+      ),
+      cardTheme: CardThemeData(
+        color: surface,
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(KairosRadius.md),
+          side: BorderSide(color: border),
+        ),
+      ),
+      dividerTheme: DividerThemeData(color: border, thickness: 1),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: surface,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(KairosRadius.md),
+          borderSide: BorderSide(color: border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(KairosRadius.md),
+          borderSide: BorderSide(color: border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(KairosRadius.md),
+          borderSide: BorderSide(color: primary, width: 1.5),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          minimumSize: const Size(44, 44),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(KairosRadius.md),
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(44, 44),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(KairosRadius.md),
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+      ),
+      navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: scaffold,
+        indicatorColor: primary.withOpacity(0.12),
+        selectedIconTheme: IconThemeData(color: primary),
+        selectedLabelTextStyle: textTheme.bodyMedium?.copyWith(
+          color: primary,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: surface,
+        indicatorColor: primary.withOpacity(0.12),
+        labelTextStyle: MaterialStateProperty.resolveWith((states) {
+          final selected = states.contains(MaterialState.selected);
+          return textTheme.labelSmall?.copyWith(
+            color: selected ? primary : textSecondary,
+          );
+        }),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: surface,
+        selectedColor: primary.withOpacity(0.12),
+        side: BorderSide(color: border),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(KairosRadius.md),
+        ),
+      ),
+    );
+  }
+}
+
+
+==================================================
+FILE: lib/core/api/api_client.dart
+==================================================
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../config/app_config.dart';
+import '../storage/secure_token_store.dart';
+
+final apiClientProvider = Provider<ApiClient>((ref) {
+  return ApiClient(ref.watch(tokenStoreProvider));
+});
+
+class ApiClient {
+  ApiClient(this._tokenStore)
+      : _dio = Dio(
+          BaseOptions(
+            baseUrl: AppConfig.apiBaseUrl,
+            connectTimeout: const Duration(seconds: 12),
+            receiveTimeout: const Duration(seconds: 20),
+            headers: {'Accept': 'application/json'},
+          ),
+        ) {
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          final token = await _tokenStore.readAccessToken();
+          if (token != null && token.isNotEmpty) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+          handler.next(options);
+        },
+      ),
+    );
+  }
+
+  final SecureTokenStore _tokenStore;
+  final Dio _dio;
+
+  Future<Response<T>> get<T>(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) {
+    return _dio.get<T>(path, queryParameters: queryParameters);
+  }
+
+  Future<Response<T>> post<T>(
+    String path, {
+    Object? data,
+    Options? options,
+  }) {
+    return _dio.post<T>(path, data: data, options: options);
+  }
+
+  Future<Response<T>> patch<T>(String path, {Object? data}) {
+    return _dio.patch<T>(path, data: data);
+  }
+
+  Future<Response<T>> delete<T>(String path) {
+    return _dio.delete<T>(path);
+  }
+}
+
+
+==================================================
+FILE: lib/core/config/app_config.dart
+==================================================
+class AppConfig {
+  const AppConfig._();
+
+  static const apiBaseUrl = String.fromEnvironment(
+    'Kairos_API_BASE_URL',
+    defaultValue: 'http://localhost:8080/api/v1',
+  );
+}
+
+
+==================================================
+FILE: lib/core/models/Kairos_models.dart
+==================================================
+enum MemoryType {
+  bill,
+  exam,
+  assignment,
+  meeting,
+  subscription,
+  travel,
+  goal,
+  note,
+}
+
+extension MemoryTypeLabel on MemoryType {
+  String get label {
+    return switch (this) {
+      MemoryType.bill => 'Bill',
+      MemoryType.exam => 'Exam',
+      MemoryType.assignment => 'Assignment',
+      MemoryType.meeting => 'Meeting',
+      MemoryType.subscription => 'Subscription',
+      MemoryType.travel => 'Travel',
+      MemoryType.goal => 'Goal',
+      MemoryType.note => 'Note',
+    };
+  }
+}
+
+enum ConfidenceLevel { high, medium, low }
+
+extension ConfidenceLabel on ConfidenceLevel {
+  String get label {
+    return switch (this) {
+      ConfidenceLevel.high => 'High',
+      ConfidenceLevel.medium => 'Medium',
+      ConfidenceLevel.low => 'Low',
+    };
+  }
+}
+
+enum WorkflowState { detected, approaching, critical, overdue, resolved }
+
+extension WorkflowStateLabel on WorkflowState {
+  String get label {
+    return switch (this) {
+      WorkflowState.detected => 'Detected',
+      WorkflowState.approaching => 'Approaching',
+      WorkflowState.critical => 'Critical',
+      WorkflowState.overdue => 'Overdue',
+      WorkflowState.resolved => 'Resolved',
+    };
+  }
+}
+
+class PriorityItem {
+  const PriorityItem({
+    required this.id,
+    required this.title,
+    required this.type,
+    required this.dueLabel,
+    required this.estimatedMinutes,
+    required this.reasons,
+    required this.workflowId,
+    this.isAiGenerated = true,
+  });
+
+  final String id;
+  final String title;
+  final MemoryType type;
+  final String dueLabel;
+  final int estimatedMinutes;
+  final List<String> reasons;
+  final String workflowId;
+  final bool isAiGenerated;
+}
+
+class RiskItem {
+  const RiskItem({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.severity,
+    required this.dueLabel,
+  });
+
+  final String id;
+  final String title;
+  final String description;
+  final ConfidenceLevel severity;
+  final String dueLabel;
+}
+
+class DashboardData {
+  const DashboardData({
+    required this.nextMove,
+    required this.everythingElse,
+    required this.risks,
+    required this.insights,
+  });
+
+  final PriorityItem? nextMove;
+  final List<PriorityItem> everythingElse;
+  final List<RiskItem> risks;
+  final List<String> insights;
+
+  bool get allClear =>
+      nextMove == null && everythingElse.isEmpty && risks.isEmpty;
+
+  DashboardData copyWith({
+    PriorityItem? nextMove,
+    List<PriorityItem>? everythingElse,
+    List<RiskItem>? risks,
+    List<String>? insights,
+    bool clearNextMove = false,
+  }) {
+    return DashboardData(
+      nextMove: clearNextMove ? null : nextMove ?? this.nextMove,
+      everythingElse: everythingElse ?? this.everythingElse,
+      risks: risks ?? this.risks,
+      insights: insights ?? this.insights,
+    );
+  }
+}
+
+class Memory {
+  const Memory({
+    required this.id,
+    required this.title,
+    required this.type,
+    required this.source,
+    required this.confidence,
+    required this.status,
+    required this.updatedLabel,
+    required this.metadata,
+    required this.workflowId,
+    this.confirmed = false,
+  });
+
+  final String id;
+  final String title;
+  final MemoryType type;
+  final String source;
+  final double confidence;
+  final String status;
+  final String updatedLabel;
+  final Map<String, String> metadata;
+  final String workflowId;
+  final bool confirmed;
+
+  ConfidenceLevel get confidenceLevel {
+    if (confidence >= 0.9) return ConfidenceLevel.high;
+    if (confidence >= 0.7) return ConfidenceLevel.medium;
+    return ConfidenceLevel.low;
+  }
+
+  Memory copyWith({
+    String? status,
+    bool? confirmed,
+    double? confidence,
+    Map<String, String>? metadata,
+  }) {
+    return Memory(
+      id: id,
+      title: title,
+      type: type,
+      source: source,
+      confidence: confidence ?? this.confidence,
+      status: status ?? this.status,
+      updatedLabel: updatedLabel,
+      metadata: metadata ?? this.metadata,
+      workflowId: workflowId,
+      confirmed: confirmed ?? this.confirmed,
+    );
+  }
+}
+
+class WorkflowStep {
+  const WorkflowStep({
+    required this.label,
+    required this.description,
+    required this.complete,
+  });
+
+  final String label;
+  final String description;
+  final bool complete;
+}
+
+class Workflow {
+  const Workflow({
+    required this.id,
+    required this.memoryId,
+    required this.title,
+    required this.typeLabel,
+    required this.state,
+    required this.snoozesUsed,
+    required this.steps,
+  });
+
+  final String id;
+  final String memoryId;
+  final String title;
+  final String typeLabel;
+  final WorkflowState state;
+  final int snoozesUsed;
+  final List<WorkflowStep> steps;
+
+  Workflow copyWith({
+    WorkflowState? state,
+    int? snoozesUsed,
+    List<WorkflowStep>? steps,
+  }) {
+    return Workflow(
+      id: id,
+      memoryId: memoryId,
+      title: title,
+      typeLabel: typeLabel,
+      state: state ?? this.state,
+      snoozesUsed: snoozesUsed ?? this.snoozesUsed,
+      steps: steps ?? this.steps,
+    );
+  }
+}
+
+class KairosNotification {
+  const KairosNotification({
+    required this.id,
+    required this.title,
+    required this.body,
+    required this.type,
+    required this.createdLabel,
+    required this.deepLink,
+    required this.read,
+  });
+
+  final String id;
+  final String title;
+  final String body;
+  final String type;
+  final String createdLabel;
+  final String deepLink;
+  final bool read;
+
+  KairosNotification copyWith({bool? read}) {
+    return KairosNotification(
+      id: id,
+      title: title,
+      body: body,
+      type: type,
+      createdLabel: createdLabel,
+      deepLink: deepLink,
+      read: read ?? this.read,
+    );
+  }
+}
+
+class NeedsReviewItem {
+  const NeedsReviewItem({
+    required this.id,
+    required this.title,
+    required this.confidence,
+    required this.extractedFields,
+    required this.source,
+  });
+
+  final String id;
+  final String title;
+  final double confidence;
+  final Map<String, String> extractedFields;
+  final String source;
+
+  ConfidenceLevel get confidenceLevel {
+    if (confidence >= 0.9) return ConfidenceLevel.high;
+    if (confidence >= 0.7) return ConfidenceLevel.medium;
+    return ConfidenceLevel.low;
+  }
+}
+
+class UserProfile {
+  const UserProfile({
+    required this.fullName,
+    required this.email,
+    required this.occupation,
+    required this.KairosInboxAddress,
+    required this.dailyBriefingTime,
+    required this.timezone,
+    required this.currency,
+    required this.notificationIntensity,
+    required this.pushEnabled,
+    required this.emailEnabled,
+  });
+
+  final String fullName;
+  final String email;
+  final String occupation;
+  final String KairosInboxAddress;
+  final String dailyBriefingTime;
+  final String timezone;
+  final String currency;
+  final double notificationIntensity;
+  final bool pushEnabled;
+  final bool emailEnabled;
+
+  UserProfile copyWith({
+    String? dailyBriefingTime,
+    String? timezone,
+    String? currency,
+    double? notificationIntensity,
+    bool? pushEnabled,
+    bool? emailEnabled,
+  }) {
+    return UserProfile(
+      fullName: fullName,
+      email: email,
+      occupation: occupation,
+      KairosInboxAddress: KairosInboxAddress,
+      dailyBriefingTime: dailyBriefingTime ?? this.dailyBriefingTime,
+      timezone: timezone ?? this.timezone,
+      currency: currency ?? this.currency,
+      notificationIntensity:
+          notificationIntensity ?? this.notificationIntensity,
+      pushEnabled: pushEnabled ?? this.pushEnabled,
+      emailEnabled: emailEnabled ?? this.emailEnabled,
+    );
+  }
+}
+
+
+==================================================
+FILE: lib/core/storage/secure_token_store.dart
+==================================================
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+final tokenStoreProvider = Provider<SecureTokenStore>((ref) {
+  return const SecureTokenStore();
+});
+
+class SecureTokenStore {
+  const SecureTokenStore();
+
+  static const _storage = FlutterSecureStorage(
+    webOptions: WebOptions(
+      dbName: 'Kairos_secure_store',
+      publicKey: 'Kairos_session_key',
+    ),
+  );
+
+  static const _accessTokenKey = 'access_token';
+  static const _refreshTokenKey = 'refresh_token';
+
+  Future<String?> readAccessToken() => _storage.read(key: _accessTokenKey);
+
+  Future<String?> readRefreshToken() => _storage.read(key: _refreshTokenKey);
+
+  Future<void> saveTokens({
+    required String accessToken,
+    required String refreshToken,
+  }) async {
+    await _storage.write(key: _accessTokenKey, value: accessToken);
+    await _storage.write(key: _refreshTokenKey, value: refreshToken);
+  }
+
+  Future<void> clear() async {
+    await _storage.delete(key: _accessTokenKey);
+    await _storage.delete(key: _refreshTokenKey);
+  }
+}
+
+
+==================================================
+FILE: lib/features/auth/application/auth_controller.dart
+==================================================
+import 'dart:async';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/storage/secure_token_store.dart';
+
+final authControllerProvider =
+    StateNotifierProvider<AuthController, AuthState>((ref) {
+  return AuthController(ref.watch(tokenStoreProvider))..restore();
+});
+
+class AuthState {
+  const AuthState({
+    required this.isAuthenticated,
+    required this.isLoading,
+    this.error,
+  });
+
+  const AuthState.signedOut()
+      : isAuthenticated = false,
+        isLoading = false,
+        error = null;
+
+  final bool isAuthenticated;
+  final bool isLoading;
+  final String? error;
+
+  AuthState copyWith({
+    bool? isAuthenticated,
+    bool? isLoading,
+    String? error,
+    bool clearError = false,
+  }) {
+    return AuthState(
+      isAuthenticated: isAuthenticated ?? this.isAuthenticated,
+      isLoading: isLoading ?? this.isLoading,
+      error: clearError ? null : error ?? this.error,
+    );
+  }
+}
+
+class AuthController extends StateNotifier<AuthState> {
+  AuthController(this._tokenStore) : super(const AuthState.signedOut());
+
+  final SecureTokenStore _tokenStore;
+
+  Future<void> restore() async {
+    final accessToken = await _tokenStore.readAccessToken();
+    if (accessToken != null && accessToken.isNotEmpty) {
+      state = state.copyWith(isAuthenticated: true);
+    }
+  }
+
+  Future<void> signIn({
+    required String email,
+    required String password,
+  }) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+
+    if (!email.contains('@') || password.length < 4) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Use a valid email and password.',
+      );
+      return;
+    }
+
+    await _tokenStore.saveTokens(
+      accessToken: 'demo-access-token',
+      refreshToken: 'demo-refresh-token',
+    );
+    state = const AuthState(isAuthenticated: true, isLoading: false);
+  }
+
+  Future<void> register({
+    required String fullName,
+    required String email,
+    required String password,
+  }) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+
+    if (fullName.trim().isEmpty || !email.contains('@') || password.length < 6) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Add your name, a valid email, and a stronger password.',
+      );
+      return;
+    }
+
+    await _tokenStore.saveTokens(
+      accessToken: 'demo-access-token',
+      refreshToken: 'demo-refresh-token',
+    );
+    state = const AuthState(isAuthenticated: true, isLoading: false);
+  }
+
+  Future<void> signOut() async {
+    await _tokenStore.clear();
+    state = const AuthState.signedOut();
+  }
+}
+
+
+==================================================
+FILE: lib/features/auth/presentation/login_screen.dart
+==================================================
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../app/theme.dart';
+import '../application/auth_controller.dart';
+
+class LoginScreen extends ConsumerStatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends ConsumerState<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController(text: 'shivansh@example.com');
+  final _passwordController = TextEditingController(text: 'Kairos-demo');
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authState = ref.watch(authControllerProvider);
+    final theme = Theme.of(context);
+
+    ref.listen(authControllerProvider, (previous, next) {
+      if (next.error != null && next.error != previous?.error) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next.error!)),
+        );
+      }
+      if (next.isAuthenticated) context.go('/home');
+    });
+
+    return Scaffold(
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(KairosSpacing.lg),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Image.asset(
+                    'assets/brand/Kairos-mark.png',
+                    width: 72,
+                    height: 72,
+                  ),
+                ),
+                const SizedBox(height: KairosSpacing.lg),
+                Text(
+                  'Welcome back',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.displayLarge,
+                ),
+                const SizedBox(height: KairosSpacing.sm),
+                Text(
+                  'Open your manager dashboard.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: KairosSpacing.xl),
+                Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          prefixIcon: Icon(Icons.mail_outline_rounded),
+                        ),
+                        validator: (value) {
+                          if (value == null || !value.contains('@')) {
+                            return 'Enter a valid email.';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: KairosSpacing.md),
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        textInputAction: TextInputAction.done,
+                        decoration: const InputDecoration(
+                          labelText: 'Password',
+                          prefixIcon: Icon(Icons.lock_outline_rounded),
+                        ),
+                        onFieldSubmitted: (_) => _submit(),
+                        validator: (value) {
+                          if (value == null || value.length < 4) {
+                            return 'Enter your password.';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: KairosSpacing.lg),
+                ElevatedButton.icon(
+                  icon: authState.isLoading
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.login_rounded),
+                  label: Text(authState.isLoading ? 'Signing in' : 'Sign in'),
+                  onPressed: authState.isLoading ? null : _submit,
+                ),
+                const SizedBox(height: KairosSpacing.sm),
+                TextButton(
+                  onPressed: () => context.go('/register'),
+                  child: const Text('Create account'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+    ref.read(authControllerProvider.notifier).signIn(
+          email: _emailController.text,
+          password: _passwordController.text,
+        );
+  }
+}
+
+
+==================================================
+FILE: lib/features/auth/presentation/register_screen.dart
+==================================================
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../app/theme.dart';
+import '../application/auth_controller.dart';
+
+class RegisterScreen extends ConsumerStatefulWidget {
+  const RegisterScreen({super.key});
+
+  @override
+  ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
+}
+
+class _RegisterScreenState extends ConsumerState<RegisterScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authState = ref.watch(authControllerProvider);
+    final theme = Theme.of(context);
+
+    ref.listen(authControllerProvider, (previous, next) {
+      if (next.error != null && next.error != previous?.error) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next.error!)),
+        );
+      }
+      if (next.isAuthenticated) context.go('/home');
+    });
+
+    return Scaffold(
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(KairosSpacing.lg),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 460),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Image.asset(
+                    'assets/brand/Kairos-mark.png',
+                    width: 72,
+                    height: 72,
+                  ),
+                ),
+                const SizedBox(height: KairosSpacing.lg),
+                Text(
+                  'Create Kairos account',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.displayLarge,
+                ),
+                const SizedBox(height: KairosSpacing.sm),
+                Text(
+                  'Start with daily priorities and trusted memory.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: KairosSpacing.xl),
+                Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: _nameController,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: 'Full name',
+                          prefixIcon: Icon(Icons.person_outline_rounded),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Enter your name.';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: KairosSpacing.md),
+                      TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          prefixIcon: Icon(Icons.mail_outline_rounded),
+                        ),
+                        validator: (value) {
+                          if (value == null || !value.contains('@')) {
+                            return 'Enter a valid email.';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: KairosSpacing.md),
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        textInputAction: TextInputAction.done,
+                        decoration: const InputDecoration(
+                          labelText: 'Password',
+                          prefixIcon: Icon(Icons.lock_outline_rounded),
+                        ),
+                        onFieldSubmitted: (_) => _submit(),
+                        validator: (value) {
+                          if (value == null || value.length < 6) {
+                            return 'Use at least 6 characters.';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: KairosSpacing.lg),
+                ElevatedButton.icon(
+                  icon: authState.isLoading
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.person_add_alt_rounded),
+                  label: Text(authState.isLoading ? 'Creating' : 'Create account'),
+                  onPressed: authState.isLoading ? null : _submit,
+                ),
+                const SizedBox(height: KairosSpacing.sm),
+                TextButton(
+                  onPressed: () => context.go('/login'),
+                  child: const Text('Sign in instead'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+    ref.read(authControllerProvider.notifier).register(
+          fullName: _nameController.text,
+          email: _emailController.text,
+          password: _passwordController.text,
+        );
+  }
+}
+
+
+==================================================
+FILE: lib/features/dashboard/presentation/home_screen.dart
+==================================================
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+
+import '../../../app/theme.dart';
+import '../../../core/models/Kairos_models.dart';
+import '../../../shared/data/Kairos_repository.dart';
+import '../../../shared/widgets/Kairos_card.dart';
+import '../../../shared/widgets/page_scaffold.dart';
+import '../../../shared/widgets/section_header.dart';
+import '../../../shared/widgets/status_pill.dart';
+
+class HomeScreen extends ConsumerWidget {
+  const HomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final data = ref.watch(KairosRepositoryProvider);
+    final profile = data.profile;
+    final today = DateFormat('EEEE, MMM d').format(DateTime.now());
+
+    return PageScaffold(
+      title: 'Good morning, ${profile.fullName}',
+      subtitle: today,
+      actions: [
+        ElevatedButton.icon(
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('Add'),
+          onPressed: () => context.go('/inbox'),
+        ),
+      ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final wide = constraints.maxWidth >= 920;
+          final main = _HomeMain(data: data);
+          final side = _HomeSide(data: data);
+          if (!wide) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                main,
+                const SizedBox(height: KairosSpacing.lg),
+                side,
+              ],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(flex: 7, child: main),
+              const SizedBox(width: KairosSpacing.lg),
+              Expanded(flex: 4, child: side),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _HomeMain extends ConsumerWidget {
+  const _HomeMain({required this.data});
+
+  final KairosData data;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final dashboard = data.dashboard;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SectionHeader(
+          title: 'Your Next Move',
+          subtitle: 'One decision at a time.',
+        ),
+        const SizedBox(height: KairosSpacing.md),
+        if (dashboard.nextMove == null)
+          const _AllClearCard()
+        else
+          _NextMoveCard(item: dashboard.nextMove!),
+        const SizedBox(height: KairosSpacing.xl),
+        SectionHeader(
+          title: 'Everything Else',
+          subtitle: '${dashboard.everythingElse.length} active commitments',
+        ),
+        const SizedBox(height: KairosSpacing.md),
+        if (dashboard.everythingElse.isEmpty)
+          const _AllClearCard()
+        else
+          Column(
+            children: [
+              for (final item in dashboard.everythingElse.take(5)) ...[
+                _PriorityRow(item: item),
+                const SizedBox(height: KairosSpacing.sm),
+              ],
+            ],
+          ),
+      ],
+    );
+  }
+}
+
+class _HomeSide extends StatelessWidget {
+  const _HomeSide({required this.data});
+
+  final KairosData data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SectionHeader(title: 'Risks'),
+        const SizedBox(height: KairosSpacing.md),
+        for (final risk in data.dashboard.risks) ...[
+          _RiskCard(risk: risk),
+          const SizedBox(height: KairosSpacing.sm),
+        ],
+        const SizedBox(height: KairosSpacing.lg),
+        const SectionHeader(title: 'Daily Briefing'),
+        const SizedBox(height: KairosSpacing.md),
+        KairosCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final insight in data.dashboard.insights) ...[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.insights_rounded, size: 18),
+                    const SizedBox(width: KairosSpacing.sm),
+                    Expanded(child: Text(insight)),
+                  ],
+                ),
+                const SizedBox(height: KairosSpacing.sm),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _NextMoveCard extends ConsumerWidget {
+  const _NextMoveCard({required this.item});
+
+  final PriorityItem item;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    return KairosCard(
+      borderColor: theme.colorScheme.primary.withOpacity(0.35),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(KairosRadius.md),
+                ),
+                child: Icon(
+                  _iconForType(item.type),
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              const SizedBox(width: KairosSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item.title, style: theme.textTheme.headlineMedium),
+                    const SizedBox(height: KairosSpacing.xs),
+                    Text(
+                      item.dueLabel,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              StatusPill(
+                label: '${item.estimatedMinutes} min',
+                icon: Icons.schedule_rounded,
+                color: KairosColors.primary,
+              ),
+            ],
+          ),
+          const SizedBox(height: KairosSpacing.lg),
+          Text('Why this matters', style: theme.textTheme.titleMedium),
+          const SizedBox(height: KairosSpacing.sm),
+          for (final reason in item.reasons) ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.check_circle_outline_rounded, size: 18),
+                const SizedBox(width: KairosSpacing.sm),
+                Expanded(child: Text(reason)),
+              ],
+            ),
+            const SizedBox(height: KairosSpacing.sm),
+          ],
+          const SizedBox(height: KairosSpacing.md),
+          Wrap(
+            spacing: KairosSpacing.sm,
+            runSpacing: KairosSpacing.sm,
+            children: [
+              ElevatedButton.icon(
+                icon: const Icon(Icons.play_arrow_rounded),
+                label: const Text('Start now'),
+                onPressed: () => context.go('/workflow/${item.workflowId}'),
+              ),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.done_rounded),
+                label: const Text('Done'),
+                onPressed: () {
+                  ref.read(KairosRepositoryProvider.notifier).completeNextMove();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Marked complete.')),
+                  );
+                },
+              ),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.snooze_rounded),
+                label: const Text('Snooze'),
+                onPressed: () {
+                  ref.read(KairosRepositoryProvider.notifier).snoozeNextMove();
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PriorityRow extends StatelessWidget {
+  const _PriorityRow({required this.item});
+
+  final PriorityItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return KairosCard(
+      onTap: () => context.go('/workflow/${item.workflowId}'),
+      child: Row(
+        children: [
+          Icon(_iconForType(item.type), color: theme.colorScheme.primary),
+          const SizedBox(width: KairosSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.title, style: theme.textTheme.titleMedium),
+                const SizedBox(height: KairosSpacing.xs),
+                Text(
+                  item.dueLabel,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right_rounded),
+        ],
+      ),
+    );
+  }
+}
+
+class _RiskCard extends StatelessWidget {
+  const _RiskCard({required this.risk});
+
+  final RiskItem risk;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = confidenceColor(risk.severity);
+    return KairosCard(
+      borderColor: color.withOpacity(0.28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              StatusPill(
+                label: risk.severity.label,
+                icon: Icons.warning_amber_rounded,
+                color: color,
+              ),
+              const Spacer(),
+              Text(
+                risk.dueLabel,
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
+            ],
+          ),
+          const SizedBox(height: KairosSpacing.sm),
+          Text(risk.title, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: KairosSpacing.xs),
+          Text(risk.description),
+        ],
+      ),
+    );
+  }
+}
+
+class _AllClearCard extends StatelessWidget {
+  const _AllClearCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return KairosCard(
+      child: Row(
+        children: [
+          const Icon(Icons.check_circle_rounded, color: KairosColors.success),
+          const SizedBox(width: KairosSpacing.md),
+          Expanded(
+            child: Text(
+              'You are all caught up.',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+          TextButton.icon(
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('Add something'),
+            onPressed: () => context.go('/inbox'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+IconData _iconForType(MemoryType type) {
+  return switch (type) {
+    MemoryType.bill => Icons.receipt_long_rounded,
+    MemoryType.exam => Icons.school_rounded,
+    MemoryType.assignment => Icons.assignment_rounded,
+    MemoryType.meeting => Icons.groups_rounded,
+    MemoryType.subscription => Icons.autorenew_rounded,
+    MemoryType.travel => Icons.flight_takeoff_rounded,
+    MemoryType.goal => Icons.flag_rounded,
+    MemoryType.note => Icons.notes_rounded,
+  };
+}
+
+
+==================================================
+FILE: lib/features/inbox/presentation/inbox_screen.dart
+==================================================
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../app/theme.dart';
+import '../../../core/models/Kairos_models.dart';
+import '../../../shared/data/Kairos_repository.dart';
+import '../../../shared/widgets/Kairos_card.dart';
+import '../../../shared/widgets/page_scaffold.dart';
+import '../../../shared/widgets/section_header.dart';
+import '../../../shared/widgets/status_pill.dart';
+
+class InboxScreen extends ConsumerStatefulWidget {
+  const InboxScreen({super.key});
+
+  @override
+  ConsumerState<InboxScreen> createState() => _InboxScreenState();
+}
+
+class _InboxScreenState extends ConsumerState<InboxScreen> {
+  final _textController = TextEditingController();
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final data = ref.watch(KairosRepositoryProvider);
+
+    return PageScaffold(
+      title: 'Manager Inbox',
+      subtitle: data.profile.KairosInboxAddress,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final wide = constraints.maxWidth >= 920;
+          final capture = _CapturePanel(
+            textController: _textController,
+            inboxAddress: data.profile.KairosInboxAddress,
+            onSubmit: _submitText,
+            onPickFiles: _pickFiles,
+          );
+          final review = _ReviewQueue(items: data.needsReview);
+
+          if (!wide) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                capture,
+                const SizedBox(height: KairosSpacing.lg),
+                review,
+              ],
+            );
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(flex: 5, child: capture),
+              const SizedBox(width: KairosSpacing.lg),
+              Expanded(flex: 6, child: review),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _submitText() {
+    ref.read(KairosRepositoryProvider.notifier).submitText(_textController.text);
+    _textController.clear();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Added to review queue.')),
+    );
+  }
+
+  Future<void> _pickFiles() async {
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      type: FileType.custom,
+      allowedExtensions: [
+        'pdf',
+        'png',
+        'jpg',
+        'jpeg',
+        'webp',
+        'txt',
+        'mp3',
+        'wav',
+        'm4a',
+      ],
+    );
+
+    if (!mounted || result == null) return;
+    final fileNames = result.files.map((file) => file.name).join(', ');
+    ref.read(KairosRepositoryProvider.notifier).submitText('Uploaded $fileNames');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Uploaded ${result.files.length} file(s).')),
+    );
+  }
+}
+
+class _CapturePanel extends StatelessWidget {
+  const _CapturePanel({
+    required this.textController,
+    required this.inboxAddress,
+    required this.onSubmit,
+    required this.onPickFiles,
+  });
+
+  final TextEditingController textController;
+  final String inboxAddress;
+  final VoidCallback onSubmit;
+  final VoidCallback onPickFiles;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SectionHeader(title: 'Capture'),
+        const SizedBox(height: KairosSpacing.md),
+        TextField(
+          controller: textController,
+          minLines: 5,
+          maxLines: 8,
+          textInputAction: TextInputAction.newline,
+          decoration: const InputDecoration(
+            hintText: 'Exam on September 15, bill due tomorrow, meeting at 4...',
+            alignLabelWithHint: true,
+            prefixIcon: Padding(
+              padding: EdgeInsets.only(bottom: 92),
+              child: Icon(Icons.edit_note_rounded),
+            ),
+          ),
+        ),
+        const SizedBox(height: KairosSpacing.md),
+        Wrap(
+          spacing: KairosSpacing.sm,
+          runSpacing: KairosSpacing.sm,
+          children: [
+            ElevatedButton.icon(
+              icon: const Icon(Icons.send_rounded),
+              label: const Text('Send'),
+              onPressed: onSubmit,
+            ),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.upload_file_rounded),
+              label: const Text('Upload'),
+              onPressed: onPickFiles,
+            ),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.mic_rounded),
+              label: const Text('Voice'),
+              onPressed: onPickFiles,
+            ),
+          ],
+        ),
+        const SizedBox(height: KairosSpacing.lg),
+        KairosCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.mail_lock_outlined,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(width: KairosSpacing.sm),
+                  Text('Kairos Inbox', style: theme.textTheme.titleMedium),
+                ],
+              ),
+              const SizedBox(height: KairosSpacing.sm),
+              Text(
+                inboxAddress,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: KairosSpacing.sm),
+              Text(
+                'Forward bills, tickets, datesheets, invites, and subscription emails.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ReviewQueue extends ConsumerWidget {
+  const _ReviewQueue({required this.items});
+
+  final List<NeedsReviewItem> items;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SectionHeader(
+          title: 'Needs Review',
+          subtitle: '${items.length} item(s)',
+        ),
+        const SizedBox(height: KairosSpacing.md),
+        if (items.isEmpty)
+          const KairosCard(child: Text('No new items.'))
+        else
+          for (final item in items) ...[
+            _NeedsReviewCard(item: item),
+            const SizedBox(height: KairosSpacing.sm),
+          ],
+      ],
+    );
+  }
+}
+
+class _NeedsReviewCard extends ConsumerWidget {
+  const _NeedsReviewCard({required this.item});
+
+  final NeedsReviewItem item;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final color = confidenceColor(item.confidenceLevel);
+    return KairosCard(
+      borderColor: color.withOpacity(0.28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  item.title,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+              StatusPill(
+                label: '${(item.confidence * 100).round()}%',
+                icon: Icons.psychology_alt_rounded,
+                color: color,
+              ),
+            ],
+          ),
+          const SizedBox(height: KairosSpacing.xs),
+          Text(
+            item.source,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+          const SizedBox(height: KairosSpacing.md),
+          for (final entry in item.extractedFields.entries) ...[
+            _FieldRow(label: entry.key, value: entry.value),
+            const SizedBox(height: KairosSpacing.xs),
+          ],
+          const SizedBox(height: KairosSpacing.md),
+          Wrap(
+            spacing: KairosSpacing.sm,
+            runSpacing: KairosSpacing.sm,
+            children: [
+              ElevatedButton.icon(
+                icon: const Icon(Icons.check_rounded),
+                label: const Text('Confirm'),
+                onPressed: () {
+                  ref.read(KairosRepositoryProvider.notifier).confirmReview(item.id);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Memory created.')),
+                  );
+                },
+              ),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.edit_rounded),
+                label: const Text('Edit'),
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Edit flow ready for API wiring.')),
+                  );
+                },
+              ),
+              TextButton.icon(
+                icon: const Icon(Icons.archive_outlined),
+                label: const Text('Ignore'),
+                onPressed: () {
+                  ref.read(KairosRepositoryProvider.notifier).ignoreReview(item.id);
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FieldRow extends StatelessWidget {
+  const _FieldRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 120,
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall,
+          ),
+        ),
+        const SizedBox(width: KairosSpacing.sm),
+        Expanded(child: Text(value)),
+      ],
+    );
+  }
+}
+
+
+==================================================
+FILE: lib/features/memories/presentation/memories_screen.dart
+==================================================
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../app/theme.dart';
+import '../../../core/models/Kairos_models.dart';
+import '../../../shared/data/Kairos_repository.dart';
+import '../../../shared/widgets/Kairos_card.dart';
+import '../../../shared/widgets/page_scaffold.dart';
+import '../../../shared/widgets/status_pill.dart';
+
+class MemoriesScreen extends ConsumerStatefulWidget {
+  const MemoriesScreen({super.key});
+
+  @override
+  ConsumerState<MemoriesScreen> createState() => _MemoriesScreenState();
+}
+
+class _MemoriesScreenState extends ConsumerState<MemoriesScreen> {
+  String _query = '';
+  MemoryType? _selectedType;
+
+  @override
+  Widget build(BuildContext context) {
+    final memories = ref.watch(KairosRepositoryProvider).memories.where((memory) {
+      final matchesQuery = _query.isEmpty ||
+          memory.title.toLowerCase().contains(_query.toLowerCase()) ||
+          memory.metadata.values.any(
+            (value) => value.toLowerCase().contains(_query.toLowerCase()),
+          );
+      final matchesType = _selectedType == null || memory.type == _selectedType;
+      return matchesQuery && matchesType;
+    }).toList();
+
+    return PageScaffold(
+      title: 'Memories',
+      subtitle: 'Search, confirm, and correct what Kairos remembers.',
+      actions: [
+        ElevatedButton.icon(
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('Create'),
+          onPressed: () => context.go('/inbox'),
+        ),
+      ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            decoration: const InputDecoration(
+              hintText: 'Search memories',
+              prefixIcon: Icon(Icons.search_rounded),
+            ),
+            onChanged: (value) => setState(() => _query = value),
+          ),
+          const SizedBox(height: KairosSpacing.md),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(right: KairosSpacing.sm),
+                  child: FilterChip(
+                    label: const Text('All'),
+                    selected: _selectedType == null,
+                    onSelected: (_) => setState(() => _selectedType = null),
+                  ),
+                ),
+                for (final type in MemoryType.values)
+                  Padding(
+                    padding: const EdgeInsets.only(right: KairosSpacing.sm),
+                    child: FilterChip(
+                      label: Text(type.label),
+                      selected: _selectedType == type,
+                      onSelected: (_) => setState(() => _selectedType = type),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: KairosSpacing.lg),
+          if (memories.isEmpty)
+            const KairosCard(child: Text('No memories yet.'))
+          else
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final columns = constraints.maxWidth >= 1000
+                    ? 3
+                    : constraints.maxWidth >= 680
+                        ? 2
+                        : 1;
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: memories.length,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: columns,
+                    crossAxisSpacing: KairosSpacing.md,
+                    mainAxisSpacing: KairosSpacing.md,
+                    mainAxisExtent: columns == 1 ? 190 : 220,
+                  ),
+                  itemBuilder: (context, index) {
+                    return _MemoryCard(memory: memories[index]);
+                  },
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MemoryCard extends StatelessWidget {
+  const _MemoryCard({required this.memory});
+
+  final Memory memory;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = confidenceColor(memory.confidenceLevel);
+    final theme = Theme.of(context);
+    return KairosCard(
+      onTap: () => context.go('/memory/${memory.id}'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(_iconForType(memory.type), color: theme.colorScheme.primary),
+              const SizedBox(width: KairosSpacing.sm),
+              Expanded(
+                child: Text(
+                  memory.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: KairosSpacing.sm),
+          Wrap(
+            spacing: KairosSpacing.sm,
+            runSpacing: KairosSpacing.xs,
+            children: [
+              StatusPill(label: memory.type.label, color: theme.colorScheme.primary),
+              StatusPill(
+                label: memory.confidenceLevel.label,
+                color: color,
+                icon: Icons.verified_outlined,
+              ),
+            ],
+          ),
+          const SizedBox(height: KairosSpacing.md),
+          Text(
+            memory.status,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const Spacer(),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  memory.source,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelSmall,
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+IconData _iconForType(MemoryType type) {
+  return switch (type) {
+    MemoryType.bill => Icons.receipt_long_rounded,
+    MemoryType.exam => Icons.school_rounded,
+    MemoryType.assignment => Icons.assignment_rounded,
+    MemoryType.meeting => Icons.groups_rounded,
+    MemoryType.subscription => Icons.autorenew_rounded,
+    MemoryType.travel => Icons.flight_takeoff_rounded,
+    MemoryType.goal => Icons.flag_rounded,
+    MemoryType.note => Icons.notes_rounded,
+  };
+}
+
+
+==================================================
+FILE: lib/features/memories/presentation/memory_detail_screen.dart
+==================================================
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../app/theme.dart';
+import '../../../shared/data/Kairos_repository.dart';
+import '../../../shared/widgets/Kairos_card.dart';
+import '../../../shared/widgets/page_scaffold.dart';
+import '../../../shared/widgets/section_header.dart';
+import '../../../shared/widgets/status_pill.dart';
+import '../../../core/models/Kairos_models.dart';
+
+class MemoryDetailScreen extends ConsumerWidget {
+  const MemoryDetailScreen({required this.id, super.key});
+
+  final String id;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final data = ref.watch(KairosRepositoryProvider);
+    final memory = data.memoryById(id);
+
+    if (memory == null) {
+      return PageScaffold(
+        title: 'Memory not found',
+        child: KairosCard(
+          child: TextButton.icon(
+            icon: const Icon(Icons.arrow_back_rounded),
+            label: const Text('Back to memories'),
+            onPressed: () => context.go('/memories'),
+          ),
+        ),
+      );
+    }
+
+    return PageScaffold(
+      title: memory.title,
+      subtitle: '${memory.source} - ${memory.updatedLabel}',
+      actions: [
+        Tooltip(
+          message: 'Back',
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: () => context.go('/memories'),
+          ),
+        ),
+      ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final wide = constraints.maxWidth >= 900;
+          final details = _DetailsPanel(memoryId: memory.id);
+          final timeline = _TimelinePanel(memoryId: memory.id);
+          if (!wide) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                details,
+                const SizedBox(height: KairosSpacing.lg),
+                timeline,
+              ],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(flex: 6, child: details),
+              const SizedBox(width: KairosSpacing.lg),
+              Expanded(flex: 4, child: timeline),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _DetailsPanel extends ConsumerWidget {
+  const _DetailsPanel({required this.memoryId});
+
+  final String memoryId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final data = ref.watch(KairosRepositoryProvider);
+    final memory = data.memoryById(memoryId)!;
+    final confidence = confidenceColor(memory.confidenceLevel);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        KairosCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: KairosSpacing.sm,
+                runSpacing: KairosSpacing.sm,
+                children: [
+                  StatusPill(label: memory.type.label, color: Theme.of(context).colorScheme.primary),
+                  StatusPill(
+                    label: '${(memory.confidence * 100).round()}%',
+                    icon: Icons.verified_outlined,
+                    color: confidence,
+                  ),
+                  StatusPill(label: memory.status, color: confidence),
+                ],
+              ),
+              const SizedBox(height: KairosSpacing.lg),
+              for (final entry in memory.metadata.entries) ...[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 140,
+                      child: Text(
+                        entry.key,
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                    ),
+                    const SizedBox(width: KairosSpacing.sm),
+                    Expanded(child: Text(entry.value)),
+                  ],
+                ),
+                const Divider(height: KairosSpacing.lg),
+              ],
+              const SizedBox(height: KairosSpacing.sm),
+              Wrap(
+                spacing: KairosSpacing.sm,
+                runSpacing: KairosSpacing.sm,
+                children: [
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.check_rounded),
+                    label: const Text('Confirm'),
+                    onPressed: () {
+                      ref.read(KairosRepositoryProvider.notifier).confirmMemory(memory.id);
+                    },
+                  ),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.route_rounded),
+                    label: const Text('Workflow'),
+                    onPressed: () => context.go('/workflow/${memory.workflowId}'),
+                  ),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.edit_rounded),
+                    label: const Text('Edit'),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Edit memory is ready for API wiring.')),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TimelinePanel extends ConsumerWidget {
+  const _TimelinePanel({required this.memoryId});
+
+  final String memoryId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final memory = ref.watch(KairosRepositoryProvider).memoryById(memoryId)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SectionHeader(title: 'Version Timeline'),
+        const SizedBox(height: KairosSpacing.md),
+        KairosCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _TimelineEntry(
+                title: memory.confirmed ? 'Confirmed by user' : 'Created by AI',
+                subtitle: memory.updatedLabel,
+                complete: true,
+              ),
+              _TimelineEntry(
+                title: 'Fields extracted',
+                subtitle: memory.metadata.keys.join(', '),
+                complete: true,
+              ),
+              _TimelineEntry(
+                title: 'Workflow activated',
+                subtitle: memory.workflowId,
+                complete: true,
+              ),
+              const _TimelineEntry(
+                title: 'Future correction',
+                subtitle: 'No changes yet',
+                complete: false,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TimelineEntry extends StatelessWidget {
+  const _TimelineEntry({
+    required this.title,
+    required this.subtitle,
+    required this.complete,
+  });
+
+  final String title;
+  final String subtitle;
+  final bool complete;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = complete ? KairosColors.success : Theme.of(context).disabledColor;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: KairosSpacing.md),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            complete ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
+            color: color,
+            size: 20,
+          ),
+          const SizedBox(width: KairosSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: KairosSpacing.xs),
+                Text(
+                  subtitle,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+==================================================
+FILE: lib/features/notifications/presentation/notifications_screen.dart
+==================================================
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../app/theme.dart';
+import '../../../core/models/Kairos_models.dart';
+import '../../../shared/data/Kairos_repository.dart';
+import '../../../shared/widgets/Kairos_card.dart';
+import '../../../shared/widgets/page_scaffold.dart';
+import '../../../shared/widgets/status_pill.dart';
+
+class NotificationsScreen extends ConsumerWidget {
+  const NotificationsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifications = ref.watch(KairosRepositoryProvider).notifications;
+    final unread = notifications.where((notification) => !notification.read).length;
+
+    return PageScaffold(
+      title: 'Notifications',
+      subtitle: '$unread unread',
+      actions: [
+        OutlinedButton.icon(
+          icon: const Icon(Icons.done_all_rounded),
+          label: const Text('Read all'),
+          onPressed: notifications.isEmpty
+              ? null
+              : () {
+                  ref.read(KairosRepositoryProvider.notifier).markAllNotificationsRead();
+                },
+        ),
+      ],
+      child: notifications.isEmpty
+          ? const KairosCard(child: Text('No notifications.'))
+          : Column(
+              children: [
+                for (final notification in notifications) ...[
+                  _NotificationCard(notification: notification),
+                  const SizedBox(height: KairosSpacing.sm),
+                ],
+              ],
+            ),
+    );
+  }
+}
+
+class _NotificationCard extends ConsumerWidget {
+  const _NotificationCard({required this.notification});
+
+  final KairosNotification notification;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final color = _colorForType(notification.type);
+    return KairosCard(
+      borderColor: notification.read ? null : color.withOpacity(0.28),
+      onTap: () {
+        ref.read(KairosRepositoryProvider.notifier).markNotificationRead(notification.id);
+        context.go(notification.deepLink);
+      },
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(_iconForType(notification.type), color: color),
+          const SizedBox(width: KairosSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  spacing: KairosSpacing.sm,
+                  runSpacing: KairosSpacing.xs,
+                  children: [
+                    StatusPill(label: notification.type, color: color),
+                    if (!notification.read)
+                      const StatusPill(label: 'New', color: KairosColors.primary),
+                  ],
+                ),
+                const SizedBox(height: KairosSpacing.sm),
+                Text(
+                  notification.title,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: KairosSpacing.xs),
+                Text(notification.body),
+                const SizedBox(height: KairosSpacing.xs),
+                Text(
+                  notification.createdLabel,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right_rounded),
+        ],
+      ),
+    );
+  }
+}
+
+Color _colorForType(String type) {
+  return switch (type) {
+    'Workflow' => KairosColors.warning,
+    'Extraction' => KairosColors.critical,
+    'Daily Briefing' => KairosColors.primary,
+    _ => KairosColors.success,
+  };
+}
+
+IconData _iconForType(String type) {
+  return switch (type) {
+    'Workflow' => Icons.route_rounded,
+    'Extraction' => Icons.fact_check_outlined,
+    'Daily Briefing' => Icons.wb_sunny_outlined,
+    _ => Icons.notifications_rounded,
+  };
+}
+
+
+==================================================
+FILE: lib/features/profile/presentation/profile_screen.dart
+==================================================
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../app/theme.dart';
+import '../../../features/auth/application/auth_controller.dart';
+import '../../../shared/data/Kairos_repository.dart';
+import '../../../shared/widgets/Kairos_card.dart';
+import '../../../shared/widgets/page_scaffold.dart';
+import '../../../shared/widgets/section_header.dart';
+
+class ProfileScreen extends ConsumerWidget {
+  const ProfileScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final data = ref.watch(KairosRepositoryProvider);
+    final profile = data.profile;
+
+    return PageScaffold(
+      title: 'Profile',
+      subtitle: profile.email,
+      actions: [
+        Tooltip(
+          message: 'Sign out',
+          child: IconButton(
+            icon: const Icon(Icons.logout_rounded),
+            onPressed: () => ref.read(authControllerProvider.notifier).signOut(),
+          ),
+        ),
+      ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final wide = constraints.maxWidth >= 920;
+          final identity = _IdentityPanel();
+          final preferences = _PreferencesPanel();
+          if (!wide) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                identity,
+                const SizedBox(height: KairosSpacing.lg),
+                preferences,
+              ],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(flex: 4, child: identity),
+              const SizedBox(width: KairosSpacing.lg),
+              Expanded(flex: 6, child: preferences),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _IdentityPanel extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(KairosRepositoryProvider).profile;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        KairosCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    child: Text(
+                      profile.fullName.characters.first.toUpperCase(),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            color: Colors.white,
+                          ),
+                    ),
+                  ),
+                  const SizedBox(width: KairosSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          profile.fullName,
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: KairosSpacing.xs),
+                        Text(profile.occupation),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: KairosSpacing.lg),
+              _ProfileRow(label: 'Inbox', value: profile.KairosInboxAddress),
+              _ProfileRow(label: 'Timezone', value: profile.timezone),
+              _ProfileRow(label: 'Currency', value: profile.currency),
+            ],
+          ),
+        ),
+        const SizedBox(height: KairosSpacing.lg),
+        const SectionHeader(title: 'Data Ownership'),
+        const SizedBox(height: KairosSpacing.md),
+        KairosCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'You can delete any memory, raw note, file, or extracted value.',
+              ),
+              const SizedBox(height: KairosSpacing.md),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.delete_outline_rounded),
+                label: const Text('Delete account'),
+                onPressed: () => _confirmDelete(context),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _confirmDelete(BuildContext context) async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Delete account?'),
+          content: const Text('This starts the 48-hour account purge flow.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton.icon(
+              icon: const Icon(Icons.delete_forever_rounded),
+              label: const Text('Delete'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _PreferencesPanel extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(KairosRepositoryProvider).profile;
+    final themeMode = ref.watch(themeModeProvider);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SectionHeader(title: 'Preferences'),
+        const SizedBox(height: KairosSpacing.md),
+        KairosCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Theme', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: KairosSpacing.sm),
+              SegmentedButton<ThemeMode>(
+                segments: const [
+                  ButtonSegment(
+                    value: ThemeMode.system,
+                    icon: Icon(Icons.devices_rounded),
+                    label: Text('System'),
+                  ),
+                  ButtonSegment(
+                    value: ThemeMode.light,
+                    icon: Icon(Icons.light_mode_rounded),
+                    label: Text('Light'),
+                  ),
+                  ButtonSegment(
+                    value: ThemeMode.dark,
+                    icon: Icon(Icons.dark_mode_rounded),
+                    label: Text('Dark'),
+                  ),
+                ],
+                selected: {themeMode},
+                onSelectionChanged: (selection) {
+                  ref.read(themeModeProvider.notifier).state = selection.first;
+                },
+              ),
+              const Divider(height: KairosSpacing.xl),
+              Text(
+                'Daily briefing',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: KairosSpacing.sm),
+              Wrap(
+                spacing: KairosSpacing.sm,
+                runSpacing: KairosSpacing.sm,
+                children: [
+                  for (final time in const ['07:00', '08:00', '09:00'])
+                    ChoiceChip(
+                      label: Text(time),
+                      selected: profile.dailyBriefingTime == time,
+                      onSelected: (_) {
+                        ref.read(KairosRepositoryProvider.notifier).updateProfile(
+                              dailyBriefingTime: time,
+                            );
+                      },
+                    ),
+                ],
+              ),
+              const Divider(height: KairosSpacing.xl),
+              Text(
+                'Notification intensity',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              Slider(
+                value: profile.notificationIntensity,
+                onChanged: (value) {
+                  ref.read(KairosRepositoryProvider.notifier).updateProfile(
+                        notificationIntensity: value,
+                      );
+                },
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Push notifications'),
+                secondary: const Icon(Icons.notifications_active_outlined),
+                value: profile.pushEnabled,
+                onChanged: (value) {
+                  ref.read(KairosRepositoryProvider.notifier).updateProfile(
+                        pushEnabled: value,
+                      );
+                },
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Email summaries'),
+                secondary: const Icon(Icons.mark_email_read_outlined),
+                value: profile.emailEnabled,
+                onChanged: (value) {
+                  ref.read(KairosRepositoryProvider.notifier).updateProfile(
+                        emailEnabled: value,
+                      );
+                },
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProfileRow extends StatelessWidget {
+  const _ProfileRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: KairosSpacing.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 84,
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
+          ),
+          const SizedBox(width: KairosSpacing.sm),
+          Expanded(child: Text(value)),
+        ],
+      ),
+    );
+  }
+}
+
+
+==================================================
+FILE: lib/features/workflows/presentation/workflow_detail_screen.dart
+==================================================
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../app/theme.dart';
+import '../../../core/models/Kairos_models.dart';
+import '../../../shared/data/Kairos_repository.dart';
+import '../../../shared/widgets/Kairos_card.dart';
+import '../../../shared/widgets/page_scaffold.dart';
+import '../../../shared/widgets/status_pill.dart';
+
+class WorkflowDetailScreen extends ConsumerWidget {
+  const WorkflowDetailScreen({required this.id, super.key});
+
+  final String id;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final data = ref.watch(KairosRepositoryProvider);
+    final workflow = data.workflowById(id);
+
+    if (workflow == null) {
+      return PageScaffold(
+        title: 'Workflow not found',
+        child: KairosCard(
+          child: TextButton.icon(
+            icon: const Icon(Icons.arrow_back_rounded),
+            label: const Text('Back to memories'),
+            onPressed: () => context.go('/memories'),
+          ),
+        ),
+      );
+    }
+
+    final stateColor = workflowColor(workflow.state);
+    return PageScaffold(
+      title: workflow.title,
+      subtitle: workflow.typeLabel,
+      actions: [
+        Tooltip(
+          message: 'Back',
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: () => context.go('/memories'),
+          ),
+        ),
+      ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final wide = constraints.maxWidth >= 920;
+          final status = _WorkflowStatus(id: id, stateColor: stateColor);
+          final steps = _WorkflowSteps(id: id);
+
+          if (!wide) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                status,
+                const SizedBox(height: KairosSpacing.lg),
+                steps,
+              ],
+            );
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(flex: 4, child: status),
+              const SizedBox(width: KairosSpacing.lg),
+              Expanded(flex: 6, child: steps),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _WorkflowStatus extends ConsumerWidget {
+  const _WorkflowStatus({
+    required this.id,
+    required this.stateColor,
+  });
+
+  final String id;
+  final Color stateColor;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final workflow = ref.watch(KairosRepositoryProvider).workflowById(id)!;
+    return KairosCard(
+      borderColor: stateColor.withOpacity(0.28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          StatusPill(
+            label: workflow.state.label,
+            icon: Icons.route_rounded,
+            color: stateColor,
+          ),
+          const SizedBox(height: KairosSpacing.lg),
+          Text('Snoozes', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: KairosSpacing.sm),
+          LinearProgressIndicator(
+            value: workflow.snoozesUsed / 3,
+            color: workflow.snoozesUsed >= 3 ? KairosColors.critical : stateColor,
+            backgroundColor: stateColor.withOpacity(0.12),
+            minHeight: 8,
+            borderRadius: BorderRadius.circular(KairosRadius.sm),
+          ),
+          const SizedBox(height: KairosSpacing.sm),
+          Text('${workflow.snoozesUsed} of 3 used'),
+          const SizedBox(height: KairosSpacing.lg),
+          Wrap(
+            spacing: KairosSpacing.sm,
+            runSpacing: KairosSpacing.sm,
+            children: [
+              ElevatedButton.icon(
+                icon: const Icon(Icons.done_rounded),
+                label: const Text('Complete'),
+                onPressed: () {
+                  ref.read(KairosRepositoryProvider.notifier).resolveWorkflow(id);
+                },
+              ),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.snooze_rounded),
+                label: const Text('Snooze'),
+                onPressed: workflow.snoozesUsed >= 3
+                    ? null
+                    : () {
+                        ref.read(KairosRepositoryProvider.notifier).snoozeWorkflow(id);
+                      },
+              ),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.auto_fix_high_rounded),
+                label: const Text('Reassess'),
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Priority reassessment requested.')),
+                  );
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WorkflowSteps extends ConsumerWidget {
+  const _WorkflowSteps({required this.id});
+
+  final String id;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final workflow = ref.watch(KairosRepositoryProvider).workflowById(id)!;
+    return KairosCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('State Machine', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: KairosSpacing.lg),
+          for (var index = 0; index < workflow.steps.length; index++) ...[
+            _StepRow(
+              step: workflow.steps[index],
+              showConnector: index < workflow.steps.length - 1,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _StepRow extends StatelessWidget {
+  const _StepRow({
+    required this.step,
+    required this.showConnector,
+  });
+
+  final WorkflowStep step;
+  final bool showConnector;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = step.complete ? KairosColors.success : Theme.of(context).disabledColor;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Column(
+          children: [
+            Icon(
+              step.complete
+                  ? Icons.check_circle_rounded
+                  : Icons.radio_button_unchecked_rounded,
+              color: color,
+            ),
+            if (showConnector)
+              Container(
+                width: 2,
+                height: 44,
+                color: Theme.of(context).colorScheme.outline,
+              ),
+          ],
+        ),
+        const SizedBox(width: KairosSpacing.md),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: KairosSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(step.label, style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: KairosSpacing.xs),
+                Text(
+                  step.description,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+
+==================================================
+FILE: lib/main.dart
+==================================================
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'app/Kairos_app.dart';
+
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const ProviderScope(child: KairosApp()));
+}
+
+
+==================================================
+FILE: lib/shared/data/Kairos_repository.dart
+==================================================
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/models/Kairos_models.dart';
+
+final KairosRepositoryProvider =
+    StateNotifierProvider<KairosRepository, KairosData>((ref) {
+  return KairosRepository();
+});
+
+class KairosData {
+  const KairosData({
+    required this.dashboard,
+    required this.memories,
+    required this.workflows,
+    required this.notifications,
+    required this.needsReview,
+    required this.profile,
+    required this.rawNotes,
+  });
+
+  final DashboardData dashboard;
+  final List<Memory> memories;
+  final List<Workflow> workflows;
+  final List<KairosNotification> notifications;
+  final List<NeedsReviewItem> needsReview;
+  final UserProfile profile;
+  final List<String> rawNotes;
+
+  Memory? memoryById(String id) {
+    for (final memory in memories) {
+      if (memory.id == id) return memory;
+    }
+    return null;
+  }
+
+  Workflow? workflowById(String id) {
+    for (final workflow in workflows) {
+      if (workflow.id == id) return workflow;
+    }
+    return null;
+  }
+
+  KairosData copyWith({
+    DashboardData? dashboard,
+    List<Memory>? memories,
+    List<Workflow>? workflows,
+    List<KairosNotification>? notifications,
+    List<NeedsReviewItem>? needsReview,
+    UserProfile? profile,
+    List<String>? rawNotes,
+  }) {
+    return KairosData(
+      dashboard: dashboard ?? this.dashboard,
+      memories: memories ?? this.memories,
+      workflows: workflows ?? this.workflows,
+      notifications: notifications ?? this.notifications,
+      needsReview: needsReview ?? this.needsReview,
+      profile: profile ?? this.profile,
+      rawNotes: rawNotes ?? this.rawNotes,
+    );
+  }
+}
+
+class KairosRepository extends StateNotifier<KairosData> {
+  KairosRepository() : super(_seedData);
+
+  void submitText(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return;
+
+    final nowId = DateTime.now().microsecondsSinceEpoch.toString();
+    final reviewItem = NeedsReviewItem(
+      id: 'review-$nowId',
+      title: _titleFromText(trimmed),
+      confidence: 0.68,
+      extractedFields: {
+        'Detected text': trimmed,
+        'Suggested type': 'Needs classification',
+        'Date': 'Not confirmed',
+      },
+      source: 'Text intake',
+    );
+
+    state = state.copyWith(
+      needsReview: [reviewItem, ...state.needsReview],
+      notifications: [
+        KairosNotification(
+          id: 'note-$nowId',
+          title: 'New item needs review',
+          body: reviewItem.title,
+          type: 'Extraction',
+          createdLabel: 'Just now',
+          deepLink: '/inbox',
+          read: false,
+        ),
+        ...state.notifications,
+      ],
+    );
+  }
+
+  void confirmReview(String id) {
+    final item = _firstReviewOrNull(id);
+    if (item == null) return;
+
+    final memoryId = 'memory-${DateTime.now().millisecondsSinceEpoch}';
+    final workflowId = 'workflow-${DateTime.now().millisecondsSinceEpoch}';
+    final memory = Memory(
+      id: memoryId,
+      title: item.title,
+      type: MemoryType.note,
+      source: item.source,
+      confidence: item.confidence,
+      status: 'Pending Confirmation',
+      updatedLabel: 'Just now',
+      metadata: item.extractedFields,
+      workflowId: workflowId,
+      confirmed: true,
+    );
+
+    final workflow = Workflow(
+      id: workflowId,
+      memoryId: memoryId,
+      title: item.title,
+      typeLabel: 'Review',
+      state: WorkflowState.detected,
+      snoozesUsed: 0,
+      steps: const [
+        WorkflowStep(
+          label: 'Detected',
+          description: 'Information captured from intake.',
+          complete: true,
+        ),
+        WorkflowStep(
+          label: 'Confirmed',
+          description: 'Ready for priority calculation.',
+          complete: false,
+        ),
+      ],
+    );
+
+    state = state.copyWith(
+      needsReview: [
+        for (final entry in state.needsReview)
+          if (entry.id != id) entry,
+      ],
+      memories: [memory, ...state.memories],
+      workflows: [workflow, ...state.workflows],
+    );
+  }
+
+  void ignoreReview(String id) {
+    final item = _firstReviewOrNull(id);
+    if (item == null) return;
+    state = state.copyWith(
+      needsReview: [
+        for (final entry in state.needsReview)
+          if (entry.id != id) entry,
+      ],
+      rawNotes: [item.title, ...state.rawNotes],
+    );
+  }
+
+  void completeNextMove() {
+    final dashboard = state.dashboard;
+    if (dashboard.nextMove == null) return;
+
+    final nextQueue = [...dashboard.everythingElse];
+    final promoted = nextQueue.isEmpty ? null : nextQueue.removeAt(0);
+
+    state = state.copyWith(
+      dashboard: dashboard.copyWith(
+        nextMove: promoted,
+        everythingElse: nextQueue,
+        insights: [
+          'You completed one commitment today.',
+          ...dashboard.insights,
+        ],
+        clearNextMove: promoted == null,
+      ),
+    );
+  }
+
+  void snoozeNextMove() {
+    final dashboard = state.dashboard;
+    final nextMove = dashboard.nextMove;
+    if (nextMove == null) return;
+
+    final nextQueue = [...dashboard.everythingElse, nextMove];
+    state = state.copyWith(
+      dashboard: dashboard.copyWith(
+        nextMove: nextQueue.removeAt(0),
+        everythingElse: nextQueue,
+      ),
+    );
+  }
+
+  void markNotificationRead(String id) {
+    state = state.copyWith(
+      notifications: [
+        for (final notification in state.notifications)
+          notification.id == id
+              ? notification.copyWith(read: true)
+              : notification,
+      ],
+    );
+  }
+
+  void markAllNotificationsRead() {
+    state = state.copyWith(
+      notifications: [
+        for (final notification in state.notifications)
+          notification.copyWith(read: true),
+      ],
+    );
+  }
+
+  void confirmMemory(String id) {
+    state = state.copyWith(
+      memories: [
+        for (final memory in state.memories)
+          memory.id == id
+              ? memory.copyWith(
+                  status: 'Confirmed',
+                  confirmed: true,
+                  confidence: memory.confidence < 0.92 ? 0.92 : memory.confidence,
+                )
+              : memory,
+      ],
+    );
+  }
+
+  void snoozeWorkflow(String id) {
+    state = state.copyWith(
+      workflows: [
+        for (final workflow in state.workflows)
+          workflow.id == id
+              ? workflow.copyWith(snoozesUsed: workflow.snoozesUsed + 1)
+              : workflow,
+      ],
+    );
+  }
+
+  void resolveWorkflow(String id) {
+    state = state.copyWith(
+      workflows: [
+        for (final workflow in state.workflows)
+          workflow.id == id
+              ? workflow.copyWith(state: WorkflowState.resolved)
+              : workflow,
+      ],
+    );
+  }
+
+  void updateProfile({
+    String? dailyBriefingTime,
+    double? notificationIntensity,
+    bool? pushEnabled,
+    bool? emailEnabled,
+  }) {
+    state = state.copyWith(
+      profile: state.profile.copyWith(
+        dailyBriefingTime: dailyBriefingTime,
+        notificationIntensity: notificationIntensity,
+        pushEnabled: pushEnabled,
+        emailEnabled: emailEnabled,
+      ),
+    );
+  }
+
+  static String _titleFromText(String text) {
+    if (text.length <= 42) return text;
+    return '${text.substring(0, 39).trim()}...';
+  }
+
+  NeedsReviewItem? _firstReviewOrNull(String id) {
+    for (final entry in state.needsReview) {
+      if (entry.id == id) return entry;
+    }
+    return null;
+  }
+}
+
+const _seedData = KairosData(
+  dashboard: DashboardData(
+    nextMove: PriorityItem(
+      id: 'priority-dbms',
+      title: 'Finish DBMS assignment',
+      type: MemoryType.assignment,
+      dueLabel: 'Today, 6:00 PM',
+      estimatedMinutes: 45,
+      reasons: [
+        'Exam in 4 days',
+        'Assignment contributes 15%',
+        'You have one clear work block this afternoon',
+      ],
+      workflowId: 'workflow-dbms',
+    ),
+    everythingElse: [
+      PriorityItem(
+        id: 'priority-hostel',
+        title: 'Pay hostel fee',
+        type: MemoryType.bill,
+        dueLabel: 'Tomorrow',
+        estimatedMinutes: 10,
+        reasons: ['Payment due within 24 hours'],
+        workflowId: 'workflow-hostel',
+      ),
+      PriorityItem(
+        id: 'priority-linked-lists',
+        title: 'Review linked lists',
+        type: MemoryType.exam,
+        dueLabel: 'This evening',
+        estimatedMinutes: 35,
+        reasons: ['High exam impact topic'],
+        workflowId: 'workflow-linked-lists',
+      ),
+      PriorityItem(
+        id: 'priority-project-call',
+        title: 'Call project teammate',
+        type: MemoryType.meeting,
+        dueLabel: 'Before 8:00 PM',
+        estimatedMinutes: 15,
+        reasons: ['Waiting on teammate confirmation'],
+        workflowId: 'workflow-project-call',
+      ),
+      PriorityItem(
+        id: 'priority-netflix',
+        title: 'Confirm Netflix renewal',
+        type: MemoryType.subscription,
+        dueLabel: 'In 2 days',
+        estimatedMinutes: 5,
+        reasons: ['Amount missing from extraction'],
+        workflowId: 'workflow-netflix',
+      ),
+      PriorityItem(
+        id: 'priority-flight',
+        title: 'Check flight baggage rules',
+        type: MemoryType.travel,
+        dueLabel: 'This week',
+        estimatedMinutes: 12,
+        reasons: ['Travel booking detected'],
+        workflowId: 'workflow-flight',
+      ),
+    ],
+    risks: [
+      RiskItem(
+        id: 'risk-dbms',
+        title: 'DBMS exam approaching',
+        description: 'The exam is in 4 days and two prep tasks are open.',
+        severity: ConfidenceLevel.medium,
+        dueLabel: '4 days',
+      ),
+      RiskItem(
+        id: 'risk-electricity',
+        title: 'Electricity bill due',
+        description: 'Bill enters critical state in less than 24 hours.',
+        severity: ConfidenceLevel.high,
+        dueLabel: 'Tomorrow',
+      ),
+      RiskItem(
+        id: 'risk-project',
+        title: 'Project submission ambiguity',
+        description: 'Owner and final upload time are not confirmed.',
+        severity: ConfidenceLevel.low,
+        dueLabel: 'This week',
+      ),
+    ],
+    insights: [
+      'You completed 4 commitments this week.',
+      'You have 2 upcoming deadlines.',
+      'Most ignored items are bills and subscriptions.',
+    ],
+  ),
+  memories: [
+    Memory(
+      id: 'memory-dbms',
+      title: 'DBMS assignment',
+      type: MemoryType.assignment,
+      source: 'PDF upload',
+      confidence: 0.95,
+      status: 'Active',
+      updatedLabel: 'Today',
+      metadata: {
+        'Due date': 'Today, 6:00 PM',
+        'Course': 'DBMS',
+        'Estimated time': '45 minutes',
+      },
+      workflowId: 'workflow-dbms',
+    ),
+    Memory(
+      id: 'memory-electricity',
+      title: 'Electricity bill',
+      type: MemoryType.bill,
+      source: 'Screenshot',
+      confidence: 0.91,
+      status: 'Critical',
+      updatedLabel: 'Yesterday',
+      metadata: {
+        'Amount': 'INR 1,840',
+        'Due date': 'Tomorrow',
+        'Provider': 'Utility account',
+      },
+      workflowId: 'workflow-electricity',
+    ),
+    Memory(
+      id: 'memory-netflix',
+      title: 'Netflix renewal',
+      type: MemoryType.subscription,
+      source: 'Forwarded email',
+      confidence: 0.72,
+      status: 'Pending Confirmation',
+      updatedLabel: '2 hours ago',
+      metadata: {
+        'Renewal date': 'September 15',
+        'Amount': 'Not found',
+        'Vendor': 'Netflix',
+      },
+      workflowId: 'workflow-netflix',
+    ),
+    Memory(
+      id: 'memory-flight',
+      title: 'Delhi flight ticket',
+      type: MemoryType.travel,
+      source: 'Kairos Inbox',
+      confidence: 0.88,
+      status: 'Active',
+      updatedLabel: 'Yesterday',
+      metadata: {
+        'Flight': 'AI 441',
+        'Departure': 'Friday, 9:20 AM',
+        'PNR': 'Hidden',
+      },
+      workflowId: 'workflow-flight',
+    ),
+    Memory(
+      id: 'memory-linked-lists',
+      title: 'Linked lists revision',
+      type: MemoryType.exam,
+      source: 'Text note',
+      confidence: 0.93,
+      status: 'Active',
+      updatedLabel: 'Today',
+      metadata: {
+        'Topic': 'Data Structures',
+        'Exam date': 'In 4 days',
+        'Priority': 'High',
+      },
+      workflowId: 'workflow-linked-lists',
+    ),
+  ],
+  workflows: [
+    Workflow(
+      id: 'workflow-dbms',
+      memoryId: 'memory-dbms',
+      title: 'DBMS assignment workflow',
+      typeLabel: 'Assignment',
+      state: WorkflowState.critical,
+      snoozesUsed: 1,
+      steps: [
+        WorkflowStep(
+          label: 'Scheduled',
+          description: 'Assignment extracted from uploaded PDF.',
+          complete: true,
+        ),
+        WorkflowStep(
+          label: 'Week-Out',
+          description: 'Prep reminder shown in daily briefing.',
+          complete: true,
+        ),
+        WorkflowStep(
+          label: 'Day-Before',
+          description: 'Moved to risks and next move candidates.',
+          complete: true,
+        ),
+        WorkflowStep(
+          label: 'Completed',
+          description: 'Waiting for user confirmation.',
+          complete: false,
+        ),
+      ],
+    ),
+    Workflow(
+      id: 'workflow-electricity',
+      memoryId: 'memory-electricity',
+      title: 'Electricity bill workflow',
+      typeLabel: 'Bill',
+      state: WorkflowState.critical,
+      snoozesUsed: 2,
+      steps: [
+        WorkflowStep(
+          label: 'Detected',
+          description: 'Bill found in screenshot.',
+          complete: true,
+        ),
+        WorkflowStep(
+          label: 'Approaching',
+          description: 'Due within 3-7 days.',
+          complete: true,
+        ),
+        WorkflowStep(
+          label: 'Critical',
+          description: 'Due in less than 48 hours.',
+          complete: true,
+        ),
+        WorkflowStep(
+          label: 'Resolved',
+          description: 'Payment not confirmed yet.',
+          complete: false,
+        ),
+      ],
+    ),
+    Workflow(
+      id: 'workflow-netflix',
+      memoryId: 'memory-netflix',
+      title: 'Netflix renewal workflow',
+      typeLabel: 'Subscription',
+      state: WorkflowState.approaching,
+      snoozesUsed: 0,
+      steps: [
+        WorkflowStep(
+          label: 'Detected',
+          description: 'Renewal date extracted from email.',
+          complete: true,
+        ),
+        WorkflowStep(
+          label: 'Approaching',
+          description: 'Amount is missing, user confirmation needed.',
+          complete: true,
+        ),
+        WorkflowStep(
+          label: 'Resolved',
+          description: 'Waiting for decision.',
+          complete: false,
+        ),
+      ],
+    ),
+    Workflow(
+      id: 'workflow-flight',
+      memoryId: 'memory-flight',
+      title: 'Flight preparation workflow',
+      typeLabel: 'Travel',
+      state: WorkflowState.detected,
+      snoozesUsed: 0,
+      steps: [
+        WorkflowStep(
+          label: 'Detected',
+          description: 'Flight ticket parsed from Kairos Inbox.',
+          complete: true,
+        ),
+        WorkflowStep(
+          label: 'Prepare',
+          description: 'Check baggage and document requirements.',
+          complete: false,
+        ),
+      ],
+    ),
+    Workflow(
+      id: 'workflow-linked-lists',
+      memoryId: 'memory-linked-lists',
+      title: 'Linked lists revision workflow',
+      typeLabel: 'Exam',
+      state: WorkflowState.approaching,
+      snoozesUsed: 0,
+      steps: [
+        WorkflowStep(
+          label: 'Scheduled',
+          description: 'Exam topic added to study plan.',
+          complete: true,
+        ),
+        WorkflowStep(
+          label: 'Week-Out',
+          description: 'Revision block suggested.',
+          complete: true,
+        ),
+        WorkflowStep(
+          label: 'Completed',
+          description: 'Pending review session.',
+          complete: false,
+        ),
+      ],
+    ),
+  ],
+  notifications: [
+    KairosNotification(
+      id: 'notification-briefing',
+      title: 'Daily briefing ready',
+      body: 'One next move, five other items, and three risks.',
+      type: 'Daily Briefing',
+      createdLabel: '8:00 AM',
+      deepLink: '/home',
+      read: false,
+    ),
+    KairosNotification(
+      id: 'notification-bill',
+      title: 'Bill enters critical state',
+      body: 'Electricity bill is due tomorrow.',
+      type: 'Workflow',
+      createdLabel: 'Yesterday',
+      deepLink: '/workflow/workflow-electricity',
+      read: false,
+    ),
+    KairosNotification(
+      id: 'notification-extraction',
+      title: 'Extraction needs review',
+      body: 'Netflix renewal amount was not found.',
+      type: 'Extraction',
+      createdLabel: '2 hours ago',
+      deepLink: '/inbox',
+      read: true,
+    ),
+  ],
+  needsReview: [
+    NeedsReviewItem(
+      id: 'review-netflix',
+      title: 'Netflix subscription',
+      confidence: 0.72,
+      source: 'Forwarded email',
+      extractedFields: {
+        'Renewal date': 'September 15',
+        'Amount': 'Not found',
+        'Vendor': 'Netflix',
+      },
+    ),
+    NeedsReviewItem(
+      id: 'review-project',
+      title: 'Project submission',
+      confidence: 0.64,
+      source: 'Screenshot',
+      extractedFields: {
+        'Due date': 'Friday',
+        'Owner': 'Not found',
+        'Submission link': 'Detected',
+      },
+    ),
+  ],
+  profile: UserProfile(
+    fullName: 'Shivansh',
+    email: 'shivansh@example.com',
+    occupation: 'Student',
+    KairosInboxAddress: 'Kairos+shivansh@Kairos.ai',
+    dailyBriefingTime: '08:00',
+    timezone: 'Asia/Kolkata',
+    currency: 'INR',
+    notificationIntensity: 0.55,
+    pushEnabled: true,
+    emailEnabled: false,
+  ),
+  rawNotes: [
+    'Ambiguous screenshot from shopping app',
+    'Unknown meeting note from pasted text',
+  ],
+);
+
+
+==================================================
+FILE: lib/shared/widgets/Kairos_card.dart
+==================================================
+import 'package:flutter/material.dart';
+
+import '../../app/theme.dart';
+
+class KairosCard extends StatelessWidget {
+  const KairosCard({
+    required this.child,
+    this.padding = const EdgeInsets.all(KairosSpacing.md),
+    this.color,
+    this.borderColor,
+    this.onTap,
+    super.key,
+  });
+
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final Color? color;
+  final Color? borderColor;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final content = AnimatedContainer(
+      duration: const Duration(milliseconds: 160),
+      padding: padding,
+      decoration: BoxDecoration(
+        color: color ?? theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(KairosRadius.md),
+        border: Border.all(
+          color: borderColor ?? theme.colorScheme.outline,
+        ),
+        boxShadow: [
+          if (theme.brightness == Brightness.light)
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+        ],
+      ),
+      child: child,
+    );
+
+    if (onTap == null) return content;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(KairosRadius.md),
+      child: content,
+    );
+  }
+}
+
+
+==================================================
+FILE: lib/shared/widgets/Kairos_shell.dart
+==================================================
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../app/theme.dart';
+import '../../features/auth/application/auth_controller.dart';
+import '../data/Kairos_repository.dart';
+
+class KairosShell extends ConsumerWidget {
+  const KairosShell({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final width = MediaQuery.sizeOf(context).width;
+    if (width < 780) {
+      return _MobileShell(child: child);
+    }
+    return _DesktopShell(child: child);
+  }
+}
+
+class _DesktopShell extends ConsumerWidget {
+  const _DesktopShell({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedIndex = _selectedIndex(context);
+    final profile = ref.watch(KairosRepositoryProvider).profile;
+    final unreadCount = ref
+        .watch(KairosRepositoryProvider)
+        .notifications
+        .where((notification) => !notification.read)
+        .length;
+
+    return Scaffold(
+      body: Row(
+        children: [
+          NavigationRail(
+            extended: true,
+            selectedIndex: selectedIndex,
+            onDestinationSelected: (index) => _goToIndex(context, index),
+            leading: Padding(
+              padding: const EdgeInsets.only(bottom: KairosSpacing.lg),
+              child: Column(
+                children: [
+                  Image.asset(
+                    'assets/brand/Kairos-mark.png',
+                    width: 48,
+                    height: 48,
+                  ),
+                  const SizedBox(height: KairosSpacing.sm),
+                  Text(
+                    'Kairos',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ],
+              ),
+            ),
+            trailing: Expanded(
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: KairosSpacing.md),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Tooltip(
+                        message: 'Sign out',
+                        child: IconButton(
+                          icon: const Icon(Icons.logout_rounded),
+                          onPressed: () {
+                            ref
+                                .read(authControllerProvider.notifier)
+                                .signOut();
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: KairosSpacing.sm),
+                      Text(
+                        profile.fullName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            destinations: _destinations(unreadCount),
+          ),
+          VerticalDivider(
+            width: 1,
+            color: Theme.of(context).colorScheme.outline,
+          ),
+          Expanded(child: child),
+        ],
+      ),
+    );
+  }
+}
+
+class _MobileShell extends ConsumerWidget {
+  const _MobileShell({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedIndex = _selectedIndex(context);
+    final unreadCount = ref
+        .watch(KairosRepositoryProvider)
+        .notifications
+        .where((notification) => !notification.read)
+        .length;
+
+    return Scaffold(
+      appBar: AppBar(
+        titleSpacing: KairosSpacing.md,
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/brand/Kairos-mark.png',
+              width: 32,
+              height: 32,
+            ),
+            const SizedBox(width: KairosSpacing.sm),
+            const Text('Kairos'),
+          ],
+        ),
+        actions: [
+          Tooltip(
+            message: 'Sign out',
+            child: IconButton(
+              icon: const Icon(Icons.logout_rounded),
+              onPressed: () => ref.read(authControllerProvider.notifier).signOut(),
+            ),
+          ),
+        ],
+      ),
+      body: child,
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: selectedIndex,
+        onDestinationSelected: (index) => _goToIndex(context, index),
+        destinations: [
+          const NavigationDestination(
+            icon: Icon(Icons.bolt_outlined),
+            selectedIcon: Icon(Icons.bolt_rounded),
+            label: 'Home',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.move_to_inbox_outlined),
+            selectedIcon: Icon(Icons.move_to_inbox_rounded),
+            label: 'Inbox',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.auto_stories_outlined),
+            selectedIcon: Icon(Icons.auto_stories_rounded),
+            label: 'Memory',
+          ),
+          NavigationDestination(
+            icon: Badge(
+              isLabelVisible: unreadCount > 0,
+              label: Text('$unreadCount'),
+              child: const Icon(Icons.notifications_none_rounded),
+            ),
+            selectedIcon: Badge(
+              isLabelVisible: unreadCount > 0,
+              label: Text('$unreadCount'),
+              child: const Icon(Icons.notifications_rounded),
+            ),
+            label: 'Alerts',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.person_outline_rounded),
+            selectedIcon: Icon(Icons.person_rounded),
+            label: 'Profile',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+List<NavigationRailDestination> _destinations(int unreadCount) {
+  return [
+    const NavigationRailDestination(
+      icon: Icon(Icons.bolt_outlined),
+      selectedIcon: Icon(Icons.bolt_rounded),
+      label: Text('Home'),
+    ),
+    const NavigationRailDestination(
+      icon: Icon(Icons.move_to_inbox_outlined),
+      selectedIcon: Icon(Icons.move_to_inbox_rounded),
+      label: Text('Inbox'),
+    ),
+    const NavigationRailDestination(
+      icon: Icon(Icons.auto_stories_outlined),
+      selectedIcon: Icon(Icons.auto_stories_rounded),
+      label: Text('Memories'),
+    ),
+    NavigationRailDestination(
+      icon: Badge(
+        isLabelVisible: unreadCount > 0,
+        label: Text('$unreadCount'),
+        child: const Icon(Icons.notifications_none_rounded),
+      ),
+      selectedIcon: Badge(
+        isLabelVisible: unreadCount > 0,
+        label: Text('$unreadCount'),
+        child: const Icon(Icons.notifications_rounded),
+      ),
+      label: const Text('Notifications'),
+    ),
+    const NavigationRailDestination(
+      icon: Icon(Icons.person_outline_rounded),
+      selectedIcon: Icon(Icons.person_rounded),
+      label: Text('Profile'),
+    ),
+  ];
+}
+
+int _selectedIndex(BuildContext context) {
+  final path = GoRouterState.of(context).uri.path;
+  if (path.startsWith('/inbox')) return 1;
+  if (path.startsWith('/memories') ||
+      path.startsWith('/memory') ||
+      path.startsWith('/workflow')) {
+    return 2;
+  }
+  if (path.startsWith('/notifications')) return 3;
+  if (path.startsWith('/profile') || path.startsWith('/settings')) return 4;
+  return 0;
+}
+
+void _goToIndex(BuildContext context, int index) {
+  final destinations = ['/home', '/inbox', '/memories', '/notifications', '/profile'];
+  context.go(destinations[index]);
+}
+
+
+==================================================
+FILE: lib/shared/widgets/page_scaffold.dart
+==================================================
+import 'package:flutter/material.dart';
+
+import '../../app/theme.dart';
+
+class PageScaffold extends StatelessWidget {
+  const PageScaffold({
+    required this.title,
+    required this.child,
+    this.actions,
+    this.subtitle,
+    super.key,
+  });
+
+  final String title;
+  final String? subtitle;
+  final List<Widget>? actions;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(
+            KairosSpacing.lg,
+            KairosSpacing.lg,
+            KairosSpacing.lg,
+            0,
+          ),
+          sliver: SliverToBoxAdapter(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1180),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title, style: theme.textTheme.displayLarge),
+                        if (subtitle != null) ...[
+                          const SizedBox(height: KairosSpacing.sm),
+                          Text(
+                            subtitle!,
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  if (actions != null) ...[
+                    const SizedBox(width: KairosSpacing.md),
+                    Wrap(spacing: KairosSpacing.sm, children: actions!),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.all(KairosSpacing.lg),
+          sliver: SliverToBoxAdapter(
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1180),
+                child: child,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+
+==================================================
+FILE: lib/shared/widgets/section_header.dart
+==================================================
+import 'package:flutter/material.dart';
+
+class SectionHeader extends StatelessWidget {
+  const SectionHeader({
+    required this.title,
+    this.subtitle,
+    this.trailing,
+    super.key,
+  });
+
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: theme.textTheme.titleLarge),
+              if (subtitle != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  subtitle!,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        if (trailing != null) trailing!,
+      ],
+    );
+  }
+}
+
+
+==================================================
+FILE: lib/shared/widgets/status_pill.dart
+==================================================
+import 'package:flutter/material.dart';
+
+import '../../app/theme.dart';
+import '../../core/models/Kairos_models.dart';
+
+class StatusPill extends StatelessWidget {
+  const StatusPill({
+    required this.label,
+    required this.color,
+    this.icon,
+    super.key,
+  });
+
+  final String label;
+  final Color color;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 32),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(KairosRadius.md),
+        border: Border.all(color: color.withOpacity(0.24)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, color: color, size: 16),
+            const SizedBox(width: 6),
+          ],
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+Color confidenceColor(ConfidenceLevel level) {
+  return switch (level) {
+    ConfidenceLevel.high => KairosColors.success,
+    ConfidenceLevel.medium => KairosColors.warning,
+    ConfidenceLevel.low => KairosColors.critical,
+  };
+}
+
+Color workflowColor(WorkflowState state) {
+  return switch (state) {
+    WorkflowState.detected => KairosColors.primary,
+    WorkflowState.approaching => KairosColors.warning,
+    WorkflowState.critical => KairosColors.critical,
+    WorkflowState.overdue => KairosColors.critical,
+    WorkflowState.resolved => KairosColors.success,
+  };
+}
+
+
+==================================================
+FILE: pubspec.yaml
+==================================================
+name: Kairos_app
+description: Flutter web and PWA frontend for the Kairos AI Manager MVP.
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  dio: ^5.7.0
+  file_picker: ^8.1.2
+  flutter_riverpod: ^2.5.1
+  flutter_secure_storage: ^9.2.2
+  go_router: ^14.2.7
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/brand/Kairos-mark.png
+
+
+==================================================
+FILE: analysis_options.yaml
+==================================================
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    prefer_single_quote zzaas: true
+    sort_child_properties_last: false
+
+
+==================================================
+FILE: README.md
+==================================================
+# Kairos Flutter Web/PWA
+
+Flutter-first frontend for Kairos, the AI Manager MVP described in `Kairos.docx`.
+
+## What Is Included
+
+- Flutter web/PWA shell with manifest and install metadata
+- Riverpod state management
+- go_router routes for auth, home, inbox, memories, workflows, notifications, profile, and settings
+- API-ready boundaries for REST integration
+- Demo data for early user feedback before the backend is complete
+- Design tokens based on the Kairos UI design system
+
+## Run Locally
+
+Install Flutter, then run:
+
+```bash
+flutter pub get
+flutter run -d chrome --dart-define=Kairos_API_BASE_URL=http://localhost:8080/api/v1
+```
+
+Build the PWA:
+
+```bash
+flutter build web --release --dart-define=Kairos_API_BASE_URL=https://api.Kairos.ai/api/v1
+```
+
+## Project Shape
+
+```text
+lib/
+|-- app/
+|-- core/
+|-- features/
+|   |-- auth/
+|   |-- dashboard/
+|   |-- inbox/
+|   |-- memories/
+|   |-- notifications/
+|   |-- profile/
+|   `-- workflows/
+|-- shared/
+`-- main.dart
+```
+
+The current repository machine does not have Flutter/Dart installed, so this project was scaffolded manually and should be analyzed after Flutter is installed.
+
