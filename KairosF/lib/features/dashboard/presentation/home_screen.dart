@@ -93,7 +93,6 @@ class _TodayMain extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final completed = items.where((item) => item.done).length;
     final blocked = data.dashboard.risks
         .where((risk) => risk.severity == ConfidenceLevel.high)
         .length;
@@ -117,11 +116,6 @@ class _TodayMain extends StatelessWidget {
               label: 'Blocked',
               value: '$blocked',
               color: KairosColors.critical,
-            ),
-            _Metric(
-              label: 'Completed',
-              value: '$completed',
-              color: KairosColors.success,
             ),
           ],
         ),
@@ -601,10 +595,6 @@ class _StatusRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (item.done) {
-      return const Icon(Icons.check_circle_rounded,
-          color: KairosColors.success);
-    }
     return Icon(
       Icons.radio_button_unchecked_rounded,
       color: item.blocked ? KairosColors.critical : item.color,
@@ -734,7 +724,6 @@ class _PlanItem {
     required this.icon,
     required this.color,
     this.workflowId,
-    this.done = false,
     this.blocked = false,
   });
 
@@ -743,7 +732,6 @@ class _PlanItem {
   final IconData icon;
   final Color color;
   final String? workflowId;
-  final bool done;
   final bool blocked;
 }
 
